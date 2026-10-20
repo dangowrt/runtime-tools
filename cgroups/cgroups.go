@@ -76,8 +76,8 @@ func FindCgroup() (Cgroup, error) {
 	return nil, fmt.Errorf("cgroup is not found")
 }
 
-// GetSubsystemPath gets path of subsystem
-func GetSubsystemPath(pid int, subsystem string) (string, error) {
+// GetV1SubsystemPath gets the path of a cgroup v1 subsystem
+func GetV1SubsystemPath(pid int, subsystem string) (string, error) {
 	contents, err := os.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
 	if err != nil {
 		return "", err
