@@ -11,11 +11,7 @@ import (
 	"github.com/opencontainers/runtime-tools/validation/util"
 )
 
-func testHugetlbCgroups(pageSizes []string) error {
-	t := tap.New()
-	t.Header(0)
-	defer t.AutoPlan()
-
+func testHugetlbCgroups(t *tap.T, pageSizes []string) {
 	// When setting the limit just for checking if writing works, the amount of memory
 	// requested does not matter, as all insigned integers will be accepted.
 	// Use 2GiB as an example
@@ -24,7 +20,7 @@ func testHugetlbCgroups(pageSizes []string) error {
 	for _, pageSize := range pageSizes {
 		g, err := util.GetDefaultGenerator()
 		if err != nil {
-			return err
+			util.Fatal(err)
 		}
 		g.SetLinuxCgroupsPath(cgroups.AbsCgroupPath)
 		g.AddLinuxResourcesHugepageLimit(pageSize, limit)
@@ -47,14 +43,12 @@ func testHugetlbCgroups(pageSizes []string) error {
 			return nil
 		})
 		if err != nil {
-			return err
+			t.Fail(err.Error())
 		}
 	}
-
-	return nil
 }
 
-func testWrongHugetlb() error {
+func testWrongHugetlb(t *tap.T) {
 	// We deliberately set the page size to a wrong value, "3MB", to see
 	// if the container really returns an error. Page sizes will always be a
 	// on the format 2^(integer)
@@ -63,24 +57,17 @@ func testWrongHugetlb() error {
 
 	g, err := util.GetDefaultGenerator()
 	if err != nil {
-		return err
+		util.Fatal(err)
 	}
-
-	t := tap.New()
-	t.Header(0)
-	defer t.AutoPlan()
 
 	g.SetLinuxCgroupsPath(cgroups.AbsCgroupPath)
 	g.AddLinuxResourcesHugepageLimit(page, limit)
 
-	err = util.RuntimeOutsideValidate(g, t, func(config *rspec.Spec, t *tap.T, state *rspec.State) error {
-		return nil
-	})
+	err = util.RuntimeOutsideValidate(g, t, nil)
 	t.Ok(err != nil, "hugepage invalid pagesize results in an errror")
 	if err == nil {
 		t.Diagnosticf("expect: err != nil, actual: err == nil")
 	}
-	return err
 }
 
 func main() {
@@ -97,11 +84,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	if err := testHugetlbCgroups(pageSizes); err != nil {
-		util.Fatal(err)
-	}
+	t := tap.New()
+	t.Header(0)
+	defer t.AutoPlan()
 
-	if err := testWrongHugetlb(); err == nil {
-		util.Fatal(err)
-	}
+	testHugetlbCgroups(t, pageSizes)
+	testWrongHugetlb(t)
 }
