@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/mndrix/tap-go"
@@ -10,15 +11,10 @@ import (
 	"github.com/opencontainers/runtime-tools/validation/util"
 )
 
-func testHugetlbCgroups() error {
+func testHugetlbCgroups(pageSizes []string) error {
 	t := tap.New()
 	t.Header(0)
 	defer t.AutoPlan()
-
-	pageSizes, err := cgroups.GetHugePageSize()
-	if err != nil {
-		t.Fail(fmt.Sprintf("error when getting hugepage sizes: %+v", err))
-	}
 
 	// When setting the limit just for checking if writing works, the amount of memory
 	// requested does not matter, as all insigned integers will be accepted.
@@ -92,7 +88,16 @@ func main() {
 		util.Fatal(fmt.Errorf("linux-specific cgroup test"))
 	}
 
-	if err := testHugetlbCgroups(); err != nil {
+	pageSizes, err := util.GetHugetlbPageSizes()
+	if err != nil {
+		util.Fatal(fmt.Errorf("error when getting hugepage sizes: %+v", err))
+	}
+	if len(pageSizes) == 0 {
+		util.Skip("no huge pages or hugetlb cgroup controller on the host", nil)
+		os.Exit(0)
+	}
+
+	if err := testHugetlbCgroups(pageSizes); err != nil {
 		util.Fatal(err)
 	}
 
